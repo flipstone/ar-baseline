@@ -32,6 +32,7 @@ module ActiveRecord
 class Baseline < ActiveRecord::Migration
   def self.up
 #{create_tables_source}
+#{insert_records_source}
   end
 end
       end_src
@@ -41,6 +42,29 @@ end
       stream = StringIO.new
       SchemaDumper.send(:new,connection).send(:tables, stream)
       stream.string
+    end
+
+    def insert_records_source
+      src = []
+      connection.tables.each do |table|
+        columns = connection.columns(table)
+        connection.execute("SELECT * FROM #{connection.quote_table_name(table)}").each do |row|
+          # don't insert our migration version, as it will break db:migrate
+          next if table == "schema_migrations" && row["version"] == migrator.current_version.to_s
+
+          values = columns.inject([]) do |vs, column|
+            vs + [connection.quote(row[column.name], column)]
+          end
+
+          column_names = columns.map {|c| connection.quote_column_name(c.name)}.join(',')
+          src << "execute('INSERT INTO #{q connection.quote_table_name(table)} (#{q column_names}) VALUES (#{q values.join(',')})')"
+        end
+      end
+      src.join("\n")
+    end
+
+    def q(s)
+      s.gsub("'", "\\\\'")
     end
 
     def delete_old_migrations

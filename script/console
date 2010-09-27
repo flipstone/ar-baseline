@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+
+gem 'activerecord', :version => ">= 2.3.8"
+gem 'sqlite3-ruby', :version => ">= 1.2.4"
+
+require 'active_record'
+
+ActiveRecord::Base.establish_connection(
+    :adapter => "sqlite3",
+    :database  => "tmp/spec_db.sqlite"
+)
+
+require 'irb'
+IRB.start(__FILE__)

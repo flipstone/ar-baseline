@@ -50,4 +50,12 @@ describe ActiveRecord::Baseline do
       File.should exist(File.join(baseline_data_directory, file)), "#{file} doesn't exist!"
     end
   end
+
+  it "can be run twice" do
+    migrator.migrate
+    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    lambda do
+      ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    end.should_not raise_error
+  end
 end

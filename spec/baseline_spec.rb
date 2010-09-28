@@ -1,6 +1,12 @@
 require 'spec_helper'
 
 describe ActiveRecord::Baseline do
+  it "collapses to a single migration" do
+    migrator.migrate
+    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    migrator.migrations.should have(1).migration
+  end
+
   it "preserves the database structure" do
     def database_structure
       connection.tables.inject({}) do |structure, table|
@@ -11,7 +17,7 @@ describe ActiveRecord::Baseline do
     migrator.migrate
     old_database_structure = database_structure
 
-    ActiveRecord::Baseline.update migrations_directory
+    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
 
     recreate_database
     migrator.migrate
@@ -30,16 +36,18 @@ describe ActiveRecord::Baseline do
 
     old_database_data = database_data
 
-    ActiveRecord::Baseline.update migrations_directory
+    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
     recreate_database
     migrator.migrate
 
     database_data.should == old_database_data
   end
 
-  it "collapases to a single migration" do
+  it "saves data into yaml files" do
     migrator.migrate
-    ActiveRecord::Baseline.update migrations_directory
-    migrator.migrations.should have(1).migration
+    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    ["foos.yml", "bars.yml", "schema_migrations.yml"].each do |file|
+      File.should exist(File.join(baseline_data_directory, file)), "#{file} doesn't exist!"
+    end
   end
 end

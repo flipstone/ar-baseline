@@ -1,20 +1,59 @@
 require 'stringio'
+require 'fileutils'
 
 module ActiveRecord
   class Baseline
-    def self.update(migrations_directory, connection=ActiveRecord::Base.connection)
-      new(migrations_directory, connection).update
+    def self.update(migrations_directory, baseline_data_directory, connection=ActiveRecord::Base.connection)
+      new(migrations_directory, baseline_data_directory, connection).update
     end
 
-    attr_reader :migrations_directory, :connection
+    attr_reader :migrations_directory, :baseline_data_directory, :connection
 
-    def initialize(migrations_directory, connection)
-      @migrations_directory, @connection = migrations_directory, connection
+    def initialize(migrations_directory, baseline_data_directory, connection)
+      @migrations_directory  = migrations_directory
+      @baseline_data_directory = baseline_data_directory
+      @connection = connection
     end
 
     def update
+      delete_old_data_files
+      dump_new_data_files
       delete_old_migrations
       create_baseline_migration
+    end
+
+    def baseline_data_file(table_name)
+      File.join(baseline_data_directory, table_name + ".yml")
+    end
+
+    def delete_old_data_files
+      Dir[baseline_data_file('*')].each do |f|
+        File.unlink f
+      end
+    end
+
+    def dump_new_data_files
+      FileUtils.mkdir_p baseline_data_directory
+
+      connection.tables.each do |table|
+        rows = connection.execute("SELECT * FROM #{connection.quote_table_name(table)}")
+        if rows.any?
+          columns = connection.columns(table)
+
+          File.open(baseline_data_file(table), 'w') do |yaml_io|
+            rows_to_dump = rows.reject do |row|
+              # don't insert our migration version, as it will break db:migrate
+              table == "schema_migrations" && row["version"] == migrator.current_version.to_s
+            end.map do |row|
+              columns.inject({}) do |vs, column|
+                vs.merge column.name => row[column.name]
+              end
+            end
+
+            YAML.dump rows_to_dump, yaml_io
+          end
+        end
+      end
     end
 
     def create_baseline_migration
@@ -32,7 +71,7 @@ module ActiveRecord
 class Baseline < ActiveRecord::Migration
   def self.up
 #{create_tables_source}
-#{insert_records_source}
+  #{insert_records_source}
   end
 end
       end_src
@@ -45,26 +84,23 @@ end
     end
 
     def insert_records_source
-      src = []
-      connection.tables.each do |table|
-        columns = connection.columns(table)
-        connection.execute("SELECT * FROM #{connection.quote_table_name(table)}").each do |row|
-          # don't insert our migration version, as it will break db:migrate
-          next if table == "schema_migrations" && row["version"] == migrator.current_version.to_s
-
-          values = columns.inject([]) do |vs, column|
-            vs + [connection.quote(row[column.name], column)]
-          end
-
-          column_names = columns.map {|c| connection.quote_column_name(c.name)}.join(',')
-          src << "execute('INSERT INTO #{q connection.quote_table_name(table)} (#{q column_names}) VALUES (#{q values.join(',')})')"
-        end
-      end
-      src.join("\n")
+      "::ActiveRecord::Baseline.new(#{migrations_directory.inspect}, #{baseline_data_directory.inspect}, connection).insert_baseline_data"
     end
 
-    def q(s)
-      s.gsub("'", "\\\\'")
+    def insert_baseline_data
+      Dir[baseline_data_file('*')].each do |data_file|
+        table_name = File.basename(data_file, '.yml')
+        columns = connection.columns(table_name).index_by(&:name)
+
+        YAML.load_file(data_file).each do |row|
+          column_names, values = row.inject([[],[]]) do |(cs, vs), (column, value)|
+            [cs + [connection.quote_column_name(column)],
+             vs + [connection.quote(row[column], columns[column])]]
+          end
+
+          connection.execute "INSERT INTO #{connection.quote_table_name(table_name)} (#{column_names.join(',')}) VALUES (#{values.join(',')})"
+        end
+      end
     end
 
     def delete_old_migrations

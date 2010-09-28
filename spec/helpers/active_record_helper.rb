@@ -16,7 +16,11 @@ module ActiveRecordHelper
   end
 
   def migrations_directory
-    fixture_path('db')
+    fixture_path('db/migrate')
+  end
+
+  def baseline_data_directory
+    fixture_path('db/baseline')
   end
 end
 

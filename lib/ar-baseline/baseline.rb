@@ -3,16 +3,41 @@ require 'fileutils'
 
 module ActiveRecord
   class Baseline
-    def self.update(migrations_directory, baseline_data_directory, connection=ActiveRecord::Base.connection)
-      new(migrations_directory, baseline_data_directory, connection).update
+    class <<self
+      attr_accessor :configuration
     end
 
-    attr_reader :migrations_directory, :baseline_data_directory, :connection
+    DEFAULT_CONFIGURATION = {
+      :migrations_directory => 'db/migrate',
+      :baseline_data_directory => 'db/baseline',
+      :connection_class_name => "ActiveRecord::Base"
+    }
 
-    def initialize(migrations_directory, baseline_data_directory, connection)
-      @migrations_directory  = migrations_directory
-      @baseline_data_directory = baseline_data_directory
-      @connection = connection
+    self.configuration = DEFAULT_CONFIGURATION.dup
+
+    def self.update(configuration = Baseline.configuration)
+      new(configuration).update
+    end
+
+    attr_reader :configuration
+
+    def initialize(configuration = Baseline.configuration)
+      @configuration = configuration
+      @migrations_directory  = configuration[:migrations_directory]
+      @baseline_data_directory = configuration[:baseline_data_directory]
+      @connection = configuration[:connection_class_name].constantize.connection
+    end
+
+    def migrations_directory
+      configuration[:migrations_directory]
+    end
+
+    def baseline_data_directory
+      configuration[:baseline_data_directory]
+    end
+
+    def connection
+      @connection ||= configuration[:connection_class_name].constantize.connection
     end
 
     def update
@@ -35,7 +60,10 @@ module ActiveRecord
     def dump_new_data_files
       FileUtils.mkdir_p baseline_data_directory
 
-      connection.tables.each do |table|
+      excluded_tables = configuration[:exclude_table_data] || []
+      tables = connection.tables - excluded_tables.map(&:to_s)
+
+      tables.each do |table|
         rows = connection.execute("SELECT * FROM #{connection.quote_table_name(table)}")
         if rows.any?
           columns = connection.columns(table)
@@ -84,7 +112,7 @@ end
     end
 
     def insert_records_source
-      "::ActiveRecord::Baseline.new(#{migrations_directory.inspect}, #{baseline_data_directory.inspect}, connection).insert_baseline_data"
+      "::ActiveRecord::Baseline.new(#{configuration.inspect}).insert_baseline_data"
     end
 
     def insert_baseline_data

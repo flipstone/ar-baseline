@@ -15,6 +15,13 @@ module ActiveRecordHelper
     ActiveRecord::Migrator.new(:up, migrations_directory, nil)
   end
 
+  def baseline_configuration
+    ActiveRecord::Baseline::DEFAULT_CONFIGURATION.merge(
+      :migrations_directory => migrations_directory,
+      :baseline_data_directory => baseline_data_directory
+    )
+  end
+
   def migrations_directory
     fixture_path('db/migrate')
   end

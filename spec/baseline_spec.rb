@@ -3,7 +3,7 @@ require 'spec_helper'
 describe ActiveRecord::Baseline do
   it "collapses to a single migration" do
     migrator.migrate
-    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    ActiveRecord::Baseline.update baseline_configuration
     migrator.migrations.should have(1).migration
   end
 
@@ -17,7 +17,7 @@ describe ActiveRecord::Baseline do
     migrator.migrate
     old_database_structure = database_structure
 
-    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    ActiveRecord::Baseline.update baseline_configuration
 
     recreate_database
     migrator.migrate
@@ -36,7 +36,7 @@ describe ActiveRecord::Baseline do
 
     old_database_data = database_data
 
-    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    ActiveRecord::Baseline.update baseline_configuration
     recreate_database
     migrator.migrate
 
@@ -45,7 +45,7 @@ describe ActiveRecord::Baseline do
 
   it "saves data into yaml files" do
     migrator.migrate
-    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    ActiveRecord::Baseline.update baseline_configuration
     ["foos.yml", "bars.yml", "schema_migrations.yml"].each do |file|
       File.should exist(File.join(baseline_data_directory, file)), "#{file} doesn't exist!"
     end
@@ -53,9 +53,21 @@ describe ActiveRecord::Baseline do
 
   it "can be run twice" do
     migrator.migrate
-    ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+    ActiveRecord::Baseline.update baseline_configuration
     lambda do
-      ActiveRecord::Baseline.update migrations_directory, baseline_data_directory
+      ActiveRecord::Baseline.update baseline_configuration
     end.should_not raise_error
+  end
+
+  it "will not dump data in excluded tables" do
+    migrator.migrate
+    ActiveRecord::Baseline.update baseline_configuration.merge(
+      :exclude_table_data => [:foos]
+    )
+
+    recreate_database
+    migrator.migrate
+    connection.execute("select count(1) as c from foos").first["c"].to_i.should == 0
+    connection.execute("select count(1) as c from bars").first["c"].to_i.should > 0
   end
 end

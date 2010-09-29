@@ -18,7 +18,8 @@ module ActiveRecordHelper
   def baseline_configuration
     ActiveRecord::Baseline::DEFAULT_CONFIGURATION.merge(
       :migrations_directory => migrations_directory,
-      :baseline_data_directory => baseline_data_directory
+      :baseline_data_directory => baseline_data_directory,
+      :verbose => false
     )
   end
 

@@ -1,0 +1,8 @@
+require 'ar-baseline'
+
+task :environment do
+  ActiveRecord::Base.establish_connection(
+      :adapter => "sqlite3",
+      :database  => ENV['SPEC_DB']
+  )
+end

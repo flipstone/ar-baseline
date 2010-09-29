@@ -8,7 +8,7 @@ ActiveRecord::Base.logger = Logger.new("tmp/spec.log")
 
 ActiveRecord::Migration.verbose = false
 
-SPEC_DB = "tmp/spec_db.sqlite"
+ENV['SPEC_DB'] = SPEC_DB = File.expand_path("tmp/spec_db.sqlite")
 
 Spec::Runner.configure do |config|
   Dir['spec/helpers/*.rb'].each do |helper_file|

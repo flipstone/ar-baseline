@@ -10,7 +10,8 @@ module ActiveRecord
     DEFAULT_CONFIGURATION = {
       :migrations_directory => 'db/migrate',
       :baseline_data_directory => 'db/baseline',
-      :connection_class_name => "ActiveRecord::Base"
+      :connection_class_name => "ActiveRecord::Base",
+      :verbose => true
     }
 
     self.configuration = DEFAULT_CONFIGURATION.dup
@@ -23,9 +24,6 @@ module ActiveRecord
 
     def initialize(configuration = Baseline.configuration)
       @configuration = configuration
-      @migrations_directory  = configuration[:migrations_directory]
-      @baseline_data_directory = configuration[:baseline_data_directory]
-      @connection = configuration[:connection_class_name].constantize.connection
     end
 
     def migrations_directory
@@ -40,11 +38,20 @@ module ActiveRecord
       @connection ||= configuration[:connection_class_name].constantize.connection
     end
 
+    def say(s)
+      puts s if configuration[:verbose]
+    end
+
     def update
+      say "Deleting old data files..."
       delete_old_data_files
+      say "Dumping new data files..."
       dump_new_data_files
+      say "Deleting old migrations..."
       delete_old_migrations
+      say "Creating #{baseline_migration_file}..."
       create_baseline_migration
+      say "Done!"
     end
 
     def baseline_data_file(table_name)

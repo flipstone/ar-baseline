@@ -4,3 +4,5 @@ require 'active_record'
 module ActiveRecord
   autoload :Baseline, 'ar-baseline/baseline'
 end
+
+require 'ar-baseline/tasks'

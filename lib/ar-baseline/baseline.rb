@@ -71,7 +71,7 @@ module ActiveRecord
       tables = connection.tables - excluded_tables.map(&:to_s)
 
       tables.each do |table|
-        rows = connection.execute("SELECT * FROM #{connection.quote_table_name(table)}")
+        rows = connection.select_all("SELECT * FROM #{connection.quote_table_name(table)}")
         if rows.any?
           columns = connection.columns(table)
 
@@ -79,10 +79,6 @@ module ActiveRecord
             rows_to_dump = rows.reject do |row|
               # don't insert our migration version, as it will break db:migrate
               table == "schema_migrations" && row["version"] == migrator.current_version.to_s
-            end.map do |row|
-              columns.inject({}) do |vs, column|
-                vs.merge column.name => row[column.name]
-              end
             end
 
             YAML.dump rows_to_dump, yaml_io

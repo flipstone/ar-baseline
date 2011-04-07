@@ -10,7 +10,7 @@ describe ActiveRecord::Baseline do
   it "preserves the database structure" do
     def database_structure
       connection.tables.inject({}) do |structure, table|
-        structure.merge(table => connection.table_structure(table))
+        structure.merge(table => connection.send(:table_structure,table))
       end
     end
 

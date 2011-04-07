@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'ar-baseline'
 require 'fileutils'
+require 'logger'
 
 gem 'sqlite3-ruby', :version => ">= 1.2.4"
 
@@ -10,9 +11,11 @@ ActiveRecord::Migration.verbose = false
 
 ENV['SPEC_DB'] = SPEC_DB = File.expand_path("tmp/spec_db.sqlite")
 
-Spec::Runner.configure do |config|
-  Dir['spec/helpers/*.rb'].each do |helper_file|
-    require helper_file
+RSpec.configure do |config|
+  Dir[
+    File.join(File.dirname(__FILE__), %w(helpers *.rb))
+  ].each do |helper_file|
+    require_relative helper_file
     config.include File.basename(helper_file, '.rb').classify.constantize
   end
 

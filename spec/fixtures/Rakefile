@@ -1,8 +1,11 @@
 require 'ar-baseline'
 
 task :environment do
+  root = File.dirname(__FILE__)
   ActiveRecord::Base.establish_connection(
-      :adapter => "sqlite3",
-      :database  => ENV['SPEC_DB']
+    :adapter => "sqlite3",
+    :database  => ENV['SPEC_DB'],
+    :migrations_directory => File.join(root, 'db', 'migrate'),
+    :baseline_data_directory => File.join(root, 'db', 'baseline'),
   )
 end

@@ -7,9 +7,11 @@ module ActiveRecord
       attr_accessor :configuration
     end
 
+    ROOT = defined?(Rails.root) ? [Rails.root] : []
+
     DEFAULT_CONFIGURATION = {
-      :migrations_directory => 'db/migrate',
-      :baseline_data_directory => 'db/baseline',
+      :migrations_directory => File.join(ROOT + %w(db migrate)),
+      :baseline_data_directory => File.join(ROOT + %w(db baseline)),
       :connection_class_name => "ActiveRecord::Base",
       :verbose => true
     }
@@ -91,6 +93,7 @@ module ActiveRecord
       File.open(baseline_migration_file, 'w') do |f|
         f << baseline_migration_source
       end
+      sleep 20
     end
 
     def baseline_migration_file

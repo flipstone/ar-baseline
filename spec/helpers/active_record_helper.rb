@@ -2,8 +2,8 @@ module ActiveRecordHelper
   def recreate_database
     File.delete(SPEC_DB) if File.exist?(SPEC_DB)
     ActiveRecord::Base.establish_connection(
-        :adapter => "sqlite3",
-        :database  => SPEC_DB
+      :adapter => "sqlite3",
+      :database  => SPEC_DB
     )
   end
 

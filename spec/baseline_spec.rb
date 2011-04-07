@@ -25,6 +25,22 @@ describe ActiveRecord::Baseline do
     database_structure.should == old_database_structure
   end
 
+  it "only collapases migrations that have run" do
+    def database_structure
+      connection.tables.inject({}) do |structure, table|
+        structure.merge(table => connection.send(:table_structure,table))
+      end
+    end
+
+    migrator(2).migrate
+    old_database_structure = database_structure
+
+    ActiveRecord::Baseline.update baseline_configuration
+
+    File.should be_exist fixture_path('db/migrate/2_baseline.rb')
+    File.should be_exist fixture_path('db/migrate/3_insert_data.rb')
+  end
+
   it "preserves the data" do
     def database_data
       connection.tables.inject({}) do |structure, table|

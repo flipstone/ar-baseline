@@ -139,7 +139,9 @@ end
 
     def delete_old_migrations
       migrator.migrations.each do |f|
-        File.unlink f.filename
+        if migrator.migrated.include?(f.version.to_i)
+          File.unlink f.filename
+        end
       end
     end
 

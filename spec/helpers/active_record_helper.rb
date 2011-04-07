@@ -11,8 +11,8 @@ module ActiveRecordHelper
     ActiveRecord::Base.connection
   end
 
-  def migrator
-    ActiveRecord::Migrator.new(:up, migrations_directory, nil)
+  def migrator(target_version = nil)
+    ActiveRecord::Migrator.new(:up, migrations_directory, target_version)
   end
 
   def baseline_configuration
